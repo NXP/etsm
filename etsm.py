@@ -272,6 +272,11 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window_lay.addWidget(self.pattern_historic_window_but)
         self.pattern_historic_window.setLayout(self.pattern_historic_window_lay)
 
+        self.edit_command.setToolTip("Enter command to send")
+        self.but_send_command.setToolTip("Send command")
+        self.edit_pattern.setToolTip("Enter pattern to detect")
+        self.but_accept_pattern.setToolTip("Add pattern")
+
 
         # Add buttons to layer
         self.layout.addWidget(self.label_command, 0, 0, 1, 1)
