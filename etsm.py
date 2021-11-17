@@ -61,7 +61,7 @@ class Port(QtCore.QObject):
         self._port.close()
 
     def send_command(self, command):
-        self._port.write(command.encode())
+        self._port.write((command+"\r").encode())
 
     def send_script(self, script):
         '''open the script and send each command, if delay put in sleep'''
@@ -397,7 +397,7 @@ if __name__ == '__main__':
         etsm.close_port()
     '''
     app = QtGui.QApplication([])
-    etsm = Etsm(port_name='/dev/ttyUSB3', baudrate=115200, command=['test'])
+    etsm = Etsm(port_name='/dev/ttyUSB2', baudrate=115200, command=['test'])
     #etsm = Port(port= port_name='/dev/ttyACM0', baudrate=115200, pattern=["0.030161"])
     #etsm.run()
     etsm.show()
