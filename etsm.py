@@ -16,7 +16,7 @@ def find_available_ports():
 
 
 class Port(QtCore.QObject):
-    sig_display_port = QtCore.pyqtSignal(str)
+    sig_display_port = QtCore.pyqtSignal(str, int)
     sig_clean_command_area = QtCore.pyqtSignal()
 
     def __init__(self, port_name, baudrate, pattern, command):
@@ -37,9 +37,11 @@ class Port(QtCore.QObject):
             except (serial.SerialException, TypeError) as e:
                 pass
             if line is not "":
-                self.sig_display_port.emit(line)
-            if self._pattern:
-                self.detect_pattern(line)
+                if self._pattern:
+                    ret = self.detect_pattern(line)
+                    self.sig_display_port.emit(line, ret)
+                else:
+                    self.sig_display_port.emit(line, 0)
 
     def stop(self):
         self.exit = True
@@ -48,7 +50,8 @@ class Port(QtCore.QObject):
         for pat in self._pattern:
             if pat in line:
                 print("success")
-                return
+                return 1
+        return 0
 
     def open_port(self):
         try:
@@ -193,7 +196,7 @@ class Etsm(QtWidgets.QMainWindow):
         self.label_accept_pattern = "OK"
         self.but_accept_pattern = QtWidgets.QPushButton()
         self.label_console = QtWidgets.QLabel("Console")
-        self.zone_console = QtWidgets.QTextEdit()
+        self.zone_console = QtWidgets.QPlainTextEdit()
         self.status_bar = self.statusBar()
         self.status_bar_label = QtWidgets.QLabel()
         self.layout = QtWidgets.QGridLayout()
@@ -365,20 +368,24 @@ class Etsm(QtWidgets.QMainWindow):
                 "Connected to " + self.worker.get_port_name() + " ; Baudrate " + self.worker.get_baudrate())
 
     def save_into_file(self, action):
-        name = QtGui.QFileDialog.getSaveFileName(caption='Save traces', filter='txt')
+        name = QtGui.QFileDialog.getSaveFileName(caption='Save traces', filter='html')
         if name[0]:
             filename = os.path.splitext(name[0])[0]
             if filename:
-                filename += '.txt'
-                self.worker.save_traces(filename, str(self.zone_console.toPlainText()))
+                filename += '.html'
+                text= self.zone_console.document()
+                self.worker.save_traces(filename, str(text.toHtml()))
 
     def add_pattern_from_but(self):
         pattern = self.edit_pattern.displayText()
         self.worker.pattern_manager(pattern)
         self.edit_pattern.clear()
 
-    def display_port(self, line):
-        self.zone_console.append(line)
+    def display_port(self, line, detected):
+        if detected:
+            self.zone_console.appendHtml(f"<b><span style='background-color: yellow;'>{line}<b>")
+        else:
+            self.zone_console.appendHtml(f"<span style='background-color: white;'>{line}")
 
 if __name__ == '__main__':
     '''
@@ -402,7 +409,7 @@ if __name__ == '__main__':
         etsm.close_port()
     '''
     app = QtGui.QApplication([])
-    etsm = Etsm(port_name='/dev/ttyUSB2', baudrate=115200, command=['test'])
+    etsm = Etsm(port_name='/dev/ttyACM0', baudrate=115200, command=['test'])
     #etsm = Port(port= port_name='/dev/ttyACM0', baudrate=115200, pattern=["0.030161"])
     #etsm.run()
     etsm.show()
