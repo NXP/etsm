@@ -1,3 +1,4 @@
+import argparse
 import os
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import serial
@@ -408,8 +409,12 @@ if __name__ == '__main__':
         thread_rx.join()
         etsm.close_port()
     '''
+    parser = argparse.ArgumentParser(description='ETSM Tool')
+    parser.add_argument('-p', '--port', required=False, help='Specify port to open', default='/dev/ttyUSB0', type=str)
+    args = parser.parse_args()
+
     app = QtGui.QApplication([])
-    etsm = Etsm(port_name='/dev/ttyACM0', baudrate=115200, command=['test'])
+    etsm = Etsm(port_name=args.port, baudrate=115200, command=['test'])
     #etsm = Port(port= port_name='/dev/ttyACM0', baudrate=115200, pattern=["0.030161"])
     #etsm.run()
     etsm.show()
