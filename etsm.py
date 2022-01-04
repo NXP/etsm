@@ -67,24 +67,31 @@ class Port(QtCore.QObject):
     def send_command(self, command):
         self._port.write((command+"\r").encode())
 
-    def send_script(self, script):
-        '''open the script and send each command, if delay put in sleep'''
-        try:
-            with open(script, mode='r') as f:
-                command_lines = f.readlines()
-                for command in command_lines:
-                    if command.split(' ')[0] == 'delay':
-                        time.sleep(int(command.split(' ')[1]))
-                    else:
-                        self.send_command(command)
-        except IOError:
-            print("Can't read script " + script + ".")
+    def send_script(self, script, file=False):
+        '''open the script or group of command and send each command, if delay put in sleep'''
+        if file:
+            try:
+                with open(script, mode='r') as f:
+                    command_lines = f.readlines()
+                    for command in command_lines:
+                        if command.split(' ')[0] == 'delay':
+                            time.sleep(int(command.split(' ')[1]))
+                        else:
+                            self.send_command(command)
+            except IOError:
+                print("Can't read script " + script + ".")
+        else:
+            for command in script:
+                if command.split(' ')[0] == 'delay':
+                    time.sleep(int(command.split(' ')[1]))
+                else:
+                    self.send_command(command)
 
     def command_manager(self, text):
         if text:
             if len(text.split('.')) > 1:
                 if text.split('.')[1] == ('txt' or 'sh'):
-                    self.send_script(text)
+                    self.send_script(text, file=True)
                 else:
                     print('bad extension')
             else:
@@ -182,7 +189,12 @@ class Etsm(QtWidgets.QMainWindow):
         self.file_menu = QtGui.QMenu("File")
         self.file_action = QtWidgets.QAction("&Save Traces as ...")
         self.toolbar = self.addToolBar("toolbar")
+        self.command_manager_action = QtGui.QAction()
         self.pattern_manager_action = QtGui.QAction()
+        self.command_historic_window = QtWidgets.QDialog()
+        self.command_historic_window_lay = QtWidgets.QVBoxLayout()
+        self.command_historic_window_edit = QtWidgets.QTextEdit()
+        self.command_historic_window_but = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Apply | QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
         self.pattern_historic_window = QtWidgets.QDialog()
         self.pattern_historic_window_lay = QtWidgets.QVBoxLayout()
         self.pattern_historic_window_edit = QtWidgets.QTextEdit()
@@ -262,15 +274,29 @@ class Etsm(QtWidgets.QMainWindow):
         self.port_config_menu.triggered[QtGui.QAction].connect(self.port_config_changed)
         self.file_menu.triggered[QtGui.QAction].connect(self.save_into_file)
 
+        self.command_manager_action.setIcon(QtGui.QIcon('upload.png'))
+        self.command_manager_action.setToolTip("Command manager")
+        self.command_manager_action.triggered.connect(self.command_manager_window)
+        self.toolbar.addAction(self.command_manager_action)
+
         self.pattern_manager_action.setIcon(QtGui.QIcon('loupe.jpg'))
         self.pattern_manager_action.setToolTip("Pattern manager")
         self.pattern_manager_action.triggered.connect(self.pattern_manager_window)
         self.toolbar.addAction(self.pattern_manager_action)
 
+        self.command_historic_window.setWindowTitle("Command Manager Window")
         self.pattern_historic_window.setWindowTitle("Pattern Manager Window")
+
+        self.command_historic_window_but.accepted.connect(self.save_command_window)
+        self.command_historic_window_but.rejected.connect(self.cancel_command_window)
+        self.command_historic_window_but.clicked.connect(self.send_command_window)
 
         self.pattern_historic_window_but.accepted.connect(self.save_pattern_window)
         self.pattern_historic_window_but.rejected.connect(self.cancel_pattern_window)
+
+        self.command_historic_window_lay.addWidget(self.command_historic_window_edit)
+        self.command_historic_window_lay.addWidget(self.command_historic_window_but)
+        self.command_historic_window.setLayout(self.command_historic_window_lay)
 
         self.pattern_historic_window_lay.addWidget(self.pattern_historic_window_edit)
         self.pattern_historic_window_lay.addWidget(self.pattern_historic_window_but)
@@ -308,8 +334,22 @@ class Etsm(QtWidgets.QMainWindow):
 
         app.aboutToQuit.connect(self.exit_app)
 
+    def cancel_command_window(self):
+        self.command_historic_window.hide()
+
     def cancel_pattern_window(self):
         self.pattern_historic_window.hide()
+
+    def save_command_window(self):
+        com = []
+        commands = self.command_historic_window_edit.toPlainText()
+        for p in commands.split('\n'):
+            if p is "":
+                pass
+            else:
+                com.append(p)
+        self.worker.set_command(com)
+        self.command_historic_window.hide()
 
     def save_pattern_window(self):
         pat = []
@@ -322,12 +362,32 @@ class Etsm(QtWidgets.QMainWindow):
         self.worker.set_pattern(pat)
         self.pattern_historic_window.hide()
 
+    def command_manager_window(self):
+        self.command_historic_window_edit.clear()
+        command = self.worker.get_command()
+        for com in command:
+            self.command_historic_window_edit.append(com)
+        self.command_historic_window.show()
+
     def pattern_manager_window(self):
         self.pattern_historic_window_edit.clear()
         pattern = self.worker.get_pattern()
         for com in pattern:
             self.pattern_historic_window_edit.append(com)
         self.pattern_historic_window.show()
+
+    def send_command_window(self, but):
+        if self.command_historic_window_but.standardButton(but) == QtGui.QDialogButtonBox.Apply:
+            com = []
+            commands = self.command_historic_window_edit.toPlainText()
+            for p in commands.split('\n'):
+                if p is "":
+                    pass
+                else:
+                    com.append(p)
+            self.worker.send_script(com)
+            self.worker.del_command()
+            self.command_historic_window.hide()
 
     def exit_app(self, event=None, *args):
         self.sig_stop_thread.emit()
@@ -414,7 +474,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     app = QtGui.QApplication([])
-    etsm = Etsm(port_name=args.port, baudrate=115200, command=['test'])
+    etsm = Etsm(port_name=args.port, baudrate=115200)
     #etsm = Port(port= port_name='/dev/ttyACM0', baudrate=115200, pattern=["0.030161"])
     #etsm.run()
     etsm.show()
