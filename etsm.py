@@ -19,6 +19,7 @@ def find_available_ports():
 class Port(QtCore.QObject):
     sig_display_port = QtCore.pyqtSignal(str, int)
     sig_clean_command_area = QtCore.pyqtSignal()
+    sig_pattern_detected = QtCore.pyqtSignal(str)
 
     def __init__(self, port_name, baudrate, pattern, command):
         super(Port, self).__init__()
@@ -50,7 +51,7 @@ class Port(QtCore.QObject):
     def detect_pattern(self, line):
         for pat in self._pattern:
             if pat in line:
-                print("success")
+                self.sig_pattern_detected.emit(pat)
                 return 1
         return 0
 
