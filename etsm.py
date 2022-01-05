@@ -304,8 +304,10 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window.setLayout(self.pattern_historic_window_lay)
 
         self.edit_command.setToolTip("Enter command to send")
+        self.edit_command.setPlaceholderText("Enter command to send or script file (.sh or .txt) ...")
         self.but_send_command.setToolTip("Send command")
         self.edit_pattern.setToolTip("Enter pattern to detect")
+        self.edit_pattern.setPlaceholderText("Enter pattern to detect ...")
         self.but_accept_pattern.setToolTip("Add pattern")
 
 
