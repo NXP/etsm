@@ -295,10 +295,15 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window_but.accepted.connect(self.save_pattern_window)
         self.pattern_historic_window_but.rejected.connect(self.cancel_pattern_window)
 
+        self.command_historic_window_edit.setPlaceholderText("Enter set of commands to send ....\nClick on :"
+                                                             "\n'Apply' to send the commands,"
+                                                             "\n'Cancel' to exit the command manager,"
+                                                             "\n'Save' to save the set of commands without sending it.")
         self.command_historic_window_lay.addWidget(self.command_historic_window_edit)
         self.command_historic_window_lay.addWidget(self.command_historic_window_but)
         self.command_historic_window.setLayout(self.command_historic_window_lay)
 
+        self.pattern_historic_window_edit.setPlaceholderText("Enter the different patterns to detect ...")
         self.pattern_historic_window_lay.addWidget(self.pattern_historic_window_edit)
         self.pattern_historic_window_lay.addWidget(self.pattern_historic_window_but)
         self.pattern_historic_window.setLayout(self.pattern_historic_window_lay)
