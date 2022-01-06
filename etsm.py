@@ -164,6 +164,49 @@ class Port(QtCore.QObject):
         self._baudrate = baudrate
 
 
+class Conditions(QtWidgets.QHBoxLayout):
+    sig_remove_condition = QtCore.pyqtSignal(int)
+
+    def __init__(self, num):
+        super().__init__()
+        self.condition_number = num
+        self.pattern_edit = QtWidgets.QLineEdit()
+        self.arrow_icon_label = QtWidgets.QLabel()
+        self.arrow_icon = QtGui.QPixmap('right_arrow.jpg')
+        self.action_edit = QtWidgets.QLineEdit()
+        self.but_condition_type = QtWidgets.QPushButton("Type")
+        self.but_condition_type_menu = QtGui.QMenu()
+        self.but_condition_remove = QtWidgets.QPushButton("X")
+
+        self.pattern_edit.setToolTip("Pattern ...")
+        self.pattern_edit.setPlaceholderText("Pattern ...")
+        self.resized_arrow_icon = self.arrow_icon.scaled(30, 30, QtCore.Qt.KeepAspectRatio)
+        self.arrow_icon_label.setPixmap(self.resized_arrow_icon)
+        self.action_edit.setToolTip("Command or event ...")
+        self.action_edit.setPlaceholderText("Command or event ...")
+        self.but_condition_type_menu.addAction("Command")
+        self.but_condition_type_menu.addAction("Event")
+        self.but_condition_type_menu.triggered[QtGui.QAction].connect(self.condition_type_selection)
+        self.but_condition_type.setMenu(self.but_condition_type_menu)
+        self.but_condition_type.setFixedSize(90, 25)
+        self.but_condition_remove.setFixedSize(25, 25)
+        self.but_condition_remove.clicked.connect(self.remove_condition)
+
+        self.addWidget(self.pattern_edit)
+        self.addWidget(self.arrow_icon_label)
+        self.addWidget(self.action_edit)
+        self.addWidget(self.but_condition_type)
+        self.addWidget(self.but_condition_remove)
+
+    def condition_type_selection(self, action):
+        self.but_condition_type.setText(action.text())
+
+    def remove_condition(self):
+        for i in reversed(range(self.count())):
+            self.itemAt(i).widget().setParent(None)
+        self.sig_remove_condition.emit(self.condition_number)
+
+
 class Etsm(QtWidgets.QMainWindow):
     sig_stop_thread = QtCore.pyqtSignal()
 
@@ -192,6 +235,7 @@ class Etsm(QtWidgets.QMainWindow):
         self.toolbar = self.addToolBar("toolbar")
         self.command_manager_action = QtGui.QAction()
         self.pattern_manager_action = QtGui.QAction()
+        self.conditions_manager_action = QtGui.QAction()
         self.command_historic_window = QtWidgets.QDialog()
         self.command_historic_window_lay = QtWidgets.QVBoxLayout()
         self.command_historic_window_edit = QtWidgets.QTextEdit()
@@ -200,6 +244,14 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window_lay = QtWidgets.QVBoxLayout()
         self.pattern_historic_window_edit = QtWidgets.QTextEdit()
         self.pattern_historic_window_but = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
+        self.conditions_window = QtWidgets.QDialog()
+        self.conditions_window_toolbar = QtWidgets.QToolBar()
+        self.list_conditions = {}
+        self.list_conditions_number = 1
+        self.conditions_window_init_cond = Conditions(1)
+        self.conditions_window_toolbar_action_add = QtGui.QAction("Add")
+        self.conditions_window_but = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
+        self.conditions_window_layout = QtWidgets.QVBoxLayout()
         self.available_ports = find_available_ports()
         self.label_command = QtWidgets.QLabel("Command")
         self.edit_command = QtWidgets.QLineEdit()
@@ -285,6 +337,11 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_manager_action.triggered.connect(self.pattern_manager_window)
         self.toolbar.addAction(self.pattern_manager_action)
 
+        self.conditions_manager_action.setIcon(QtGui.QIcon('light.jpg'))
+        self.conditions_manager_action.setToolTip("Conditions manager")
+        self.conditions_manager_action.triggered.connect(self.conditions_manager_window)
+        self.toolbar.addAction(self.conditions_manager_action)
+
         self.command_historic_window.setWindowTitle("Command Manager Window")
         self.pattern_historic_window.setWindowTitle("Pattern Manager Window")
 
@@ -315,6 +372,21 @@ class Etsm(QtWidgets.QMainWindow):
         self.edit_pattern.setPlaceholderText("Enter pattern to detect ...")
         self.but_accept_pattern.setToolTip("Add pattern")
 
+        self.conditions_window.setWindowTitle("TBD")
+        self.list_conditions[1] = self.conditions_window_init_cond
+        self.conditions_window_init_cond.sig_remove_condition.connect(self.remove_condition)
+        self.conditions_window_toolbar.addAction(self.conditions_window_toolbar_action_add)
+        self.conditions_window_toolbar_action_add.triggered.connect(self.add_condition)
+
+        self.conditions_window_toolbar.addWidget(self.conditions_window_but)
+        #self.conditions_window_toolbar.addWidget(QtGui.QWidget().setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
+        self.conditions_window_but.accepted.connect(self.save_condition_window)
+        self.conditions_window_but.rejected.connect(self.cancel_condition_window)
+
+        self.conditions_window_layout.addWidget(self.conditions_window_toolbar)
+        self.conditions_window_layout.addLayout(self.conditions_window_init_cond)
+
+        self.conditions_window.setLayout(self.conditions_window_layout)
 
         # Add buttons to layer
         self.layout.addWidget(self.label_command, 0, 0, 1, 1)
@@ -348,6 +420,9 @@ class Etsm(QtWidgets.QMainWindow):
     def cancel_pattern_window(self):
         self.pattern_historic_window.hide()
 
+    def cancel_condition_window(self):
+        self.conditions_window.hide()
+
     def save_command_window(self):
         com = []
         commands = self.command_historic_window_edit.toPlainText()
@@ -370,6 +445,9 @@ class Etsm(QtWidgets.QMainWindow):
         self.worker.set_pattern(pat)
         self.pattern_historic_window.hide()
 
+    def save_condition_window(self):
+        print('here')
+
     def command_manager_window(self):
         self.command_historic_window_edit.clear()
         command = self.worker.get_command()
@@ -383,6 +461,21 @@ class Etsm(QtWidgets.QMainWindow):
         for com in pattern:
             self.pattern_historic_window_edit.append(com)
         self.pattern_historic_window.show()
+
+    def conditions_manager_window(self):
+        self.conditions_window.show()
+
+    def add_condition(self):
+        self.list_conditions_number += 1
+        new_cond = Conditions(self.list_conditions_number)
+        new_cond.sig_remove_condition.connect(self.remove_condition)
+        self.list_conditions[self.list_conditions_number] = new_cond
+        self.conditions_window_layout.addLayout(self.list_conditions.get(self.list_conditions_number))
+
+    def remove_condition(self, condition_id):
+        self.conditions_window_layout.removeItem(self.list_conditions.get(condition_id))
+        del self.list_conditions[condition_id]
+        self.conditions_window_layout.update()
 
     def send_command_window(self, but):
         if self.command_historic_window_but.standardButton(but) == QtGui.QDialogButtonBox.Apply:
