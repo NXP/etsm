@@ -42,7 +42,7 @@ $ python3 etsm.py --port /dev/ttyUSB2
 - Change baudrate
 - Detect and highlight patterns
 - Modify patterns
-- Send external events if pattern detected
+- Send external events and/or command if pattern detected
 - Send and modify commands (single command or set of commands via script .txt or .sh)
 - Save traces as .html
 
