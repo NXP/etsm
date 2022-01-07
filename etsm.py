@@ -28,6 +28,7 @@ class Port(QtCore.QObject):
         self._baudrate = str(baudrate)
         self._pattern = pattern
         self._command = command
+        self._conditions = {}
         self.exit = False
 
         self.open_port()
@@ -39,8 +40,8 @@ class Port(QtCore.QObject):
             except (serial.SerialException, TypeError) as e:
                 pass
             if line is not "":
-                if self._pattern:
-                    ret = self.detect_pattern(line)
+                if self._pattern or self._conditions:
+                    ret = self.detect(line)
                     self.sig_display_port.emit(line, ret)
                 else:
                     self.sig_display_port.emit(line, 0)
@@ -48,12 +49,19 @@ class Port(QtCore.QObject):
     def stop(self):
         self.exit = True
 
-    def detect_pattern(self, line):
+    def detect(self, line):
+        res = False
         for pat in self._pattern:
             if pat in line:
-                self.sig_pattern_detected.emit(pat)
-                return 1
-        return 0
+                res = True
+        for cond in self._conditions.values():
+            if cond[0] in line:
+                res = True
+                if cond[2] == 'Event':
+                    self.sig_pattern_detected.emit(cond[1])
+                else:
+                    self.send_command(cond[1])
+        return res
 
     def open_port(self):
         try:
@@ -163,9 +171,26 @@ class Port(QtCore.QObject):
     def set_baudrate(self, baudrate):
         self._baudrate = baudrate
 
+    def add_condition(self, cond_id, pattern, action, type):
+        self._conditions[cond_id] = [pattern, action, type]
+
+    def get_condition(self):
+        return self._conditions
+
+    def get_specific_condition(self, cond_id):
+        return self._conditions.get(cond_id)
+
+    def del_condition(self):
+        self._conditions = {}
+
+    def del_specific_condition(self, cond_id):
+        if cond_id in self._conditions:
+            del self._conditions[cond_id]
+
 
 class Conditions(QtWidgets.QHBoxLayout):
     sig_remove_condition = QtCore.pyqtSignal(int)
+    sig_save_condition = QtCore.pyqtSignal(int, str, str, str)
 
     def __init__(self, num):
         super().__init__()
@@ -206,6 +231,20 @@ class Conditions(QtWidgets.QHBoxLayout):
             self.itemAt(i).widget().setParent(None)
         self.sig_remove_condition.emit(self.condition_number)
 
+    def clear_data(self):
+        self.pattern_edit.clear()
+        self.action_edit.clear()
+        self.but_condition_type.setText("Type")
+
+    def save_data(self):
+        pattern = self.pattern_edit.displayText()
+        action = self.action_edit.displayText()
+        type = self.but_condition_type.text()
+        if pattern != '' and action != '' and type != 'Type':
+            self.sig_save_condition.emit(self.condition_number, pattern, action, type)
+        else:
+            self.clear_data()
+
 
 class Etsm(QtWidgets.QMainWindow):
     sig_stop_thread = QtCore.pyqtSignal()
@@ -244,11 +283,11 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window_lay = QtWidgets.QVBoxLayout()
         self.pattern_historic_window_edit = QtWidgets.QTextEdit()
         self.pattern_historic_window_but = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
+        self.conditions_window_init_cond = Conditions(1)
         self.conditions_window = QtWidgets.QDialog()
         self.conditions_window_toolbar = QtWidgets.QToolBar()
         self.list_conditions = {}
         self.list_conditions_number = 1
-        self.conditions_window_init_cond = Conditions(1)
         self.conditions_window_toolbar_action_add = QtGui.QAction("Add")
         self.conditions_window_but = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
         self.conditions_window_layout = QtWidgets.QVBoxLayout()
@@ -375,8 +414,9 @@ class Etsm(QtWidgets.QMainWindow):
         self.conditions_window.setWindowTitle("TBD")
         self.list_conditions[1] = self.conditions_window_init_cond
         self.conditions_window_init_cond.sig_remove_condition.connect(self.remove_condition)
+        self.conditions_window_init_cond.sig_save_condition.connect(self.save_condition)
         self.conditions_window_toolbar.addAction(self.conditions_window_toolbar_action_add)
-        self.conditions_window_toolbar_action_add.triggered.connect(self.add_condition)
+        self.conditions_window_toolbar_action_add.triggered.connect(self.create_condition)
 
         self.conditions_window_toolbar.addWidget(self.conditions_window_but)
         #self.conditions_window_toolbar.addWidget(QtGui.QWidget().setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
@@ -421,6 +461,9 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window.hide()
 
     def cancel_condition_window(self):
+        for key in self.list_conditions:
+            if key not in self.worker.get_condition():
+                self.list_conditions[key].clear_data()
         self.conditions_window.hide()
 
     def save_command_window(self):
@@ -446,7 +489,9 @@ class Etsm(QtWidgets.QMainWindow):
         self.pattern_historic_window.hide()
 
     def save_condition_window(self):
-        print('here')
+        for key in self.list_conditions:
+            self.list_conditions[key].save_data()
+        self.conditions_window.hide()
 
     def command_manager_window(self):
         self.command_historic_window_edit.clear()
@@ -465,16 +510,21 @@ class Etsm(QtWidgets.QMainWindow):
     def conditions_manager_window(self):
         self.conditions_window.show()
 
-    def add_condition(self):
+    def create_condition(self):
         self.list_conditions_number += 1
         new_cond = Conditions(self.list_conditions_number)
         new_cond.sig_remove_condition.connect(self.remove_condition)
+        new_cond.sig_save_condition.connect(self.save_condition)
         self.list_conditions[self.list_conditions_number] = new_cond
         self.conditions_window_layout.addLayout(self.list_conditions.get(self.list_conditions_number))
+
+    def save_condition(self, condition_id, pattern, action, type):
+        self.worker.add_condition(condition_id, pattern, action, type)
 
     def remove_condition(self, condition_id):
         self.conditions_window_layout.removeItem(self.list_conditions.get(condition_id))
         del self.list_conditions[condition_id]
+        self.worker.del_specific_condition(condition_id)
         self.conditions_window_layout.update()
 
     def send_command_window(self, but):
