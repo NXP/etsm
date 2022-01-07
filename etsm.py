@@ -525,7 +525,7 @@ class Etsm(QtWidgets.QMainWindow):
         self.conditions_window_layout.removeItem(self.list_conditions.get(condition_id))
         del self.list_conditions[condition_id]
         self.worker.del_specific_condition(condition_id)
-        self.conditions_window_layout.update()
+        self.conditions_window.adjustSize()
 
     def send_command_window(self, but):
         if self.command_historic_window_but.standardButton(but) == QtGui.QDialogButtonBox.Apply:
