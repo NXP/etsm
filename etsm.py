@@ -39,7 +39,7 @@ class Port(QtCore.QObject):
                 line = self._port.readline().decode("utf-8")
             except (serial.SerialException, TypeError) as e:
                 pass
-            if line is not "":
+            if line != "":
                 if self._pattern or self._conditions:
                     ret = self.detect(line)
                     self.sig_display_port.emit(line, ret)
@@ -200,7 +200,7 @@ class Conditions(QtWidgets.QHBoxLayout):
         self.arrow_icon = QtGui.QPixmap('right_arrow.jpg')
         self.action_edit = QtWidgets.QLineEdit()
         self.but_condition_type = QtWidgets.QPushButton("Type")
-        self.but_condition_type_menu = QtGui.QMenu()
+        self.but_condition_type_menu = QtWidgets.QMenu()
         self.but_condition_remove = QtWidgets.QPushButton("X")
 
         self.pattern_edit.setToolTip("Pattern ...")
@@ -260,16 +260,16 @@ class Etsm(QtWidgets.QMainWindow):
         self.width = 650
         self.height = 650
         self.menu_bar = self.menuBar()
-        self.settings_menu = QtGui.QMenu("Settings")
-        self.port_config_menu = QtGui.QMenu("Port Configurator")
-        self.select_port_menu = QtGui.QMenu("&Port Selector")
-        self.refresh_port = QtGui.QAction("Refresh ...")
+        self.settings_menu = QtWidgets.QMenu("Settings")
+        self.port_config_menu = QtWidgets.QMenu("Port Configurator")
+        self.select_port_menu = QtWidgets.QMenu("&Port Selector")
+        self.refresh_port = QtWidgets.QAction("Refresh ...")
         self.port_checked = None
-        self.select_baudrate_menu = QtGui.QMenu("&Baudrate selector")
+        self.select_baudrate_menu = QtWidgets.QMenu("&Baudrate selector")
         self.baudrate_checked = None
         self.list_port_action = []
         self.list_baudrate_action = []
-        self.file_menu = QtGui.QMenu("File")
+        self.file_menu = QtWidgets.QMenu("File")
         self.file_action = QtWidgets.QAction("&Save Traces as ...")
         self.toolbar = self.addToolBar("toolbar")
         self.command_manager_action = QtGui.QAction()
@@ -470,7 +470,7 @@ class Etsm(QtWidgets.QMainWindow):
         com = []
         commands = self.command_historic_window_edit.toPlainText()
         for p in commands.split('\n'):
-            if p is "":
+            if p == "":
                 pass
             else:
                 com.append(p)
@@ -481,7 +481,7 @@ class Etsm(QtWidgets.QMainWindow):
         pat = []
         patterns = self.pattern_historic_window_edit.toPlainText()
         for p in patterns.split('\n'):
-            if p is "":
+            if p == "":
                 pass
             else:
                 pat.append(p)
@@ -532,7 +532,7 @@ class Etsm(QtWidgets.QMainWindow):
             com = []
             commands = self.command_historic_window_edit.toPlainText()
             for p in commands.split('\n'):
-                if p is "":
+                if p == "":
                     pass
                 else:
                     com.append(p)
@@ -544,7 +544,7 @@ class Etsm(QtWidgets.QMainWindow):
         self.sig_stop_thread.emit()
         self.thread_rx.quit()
         self.thread_rx.wait()
-        QtGui.QApplication.quit()
+        QtWidgets.QApplication.quit()
 
     def settings(self, action):
         if action.text() == "&Exit":
@@ -624,9 +624,9 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', required=False, help='Specify port to open', default='/dev/ttyUSB0', type=str)
     args = parser.parse_args()
 
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     etsm = Etsm(port_name=args.port, baudrate=115200)
     #etsm = Port(port= port_name='/dev/ttyACM0', baudrate=115200, pattern=["0.030161"])
     #etsm.run()
     etsm.show()
-    QtGui.QApplication.instance().exec_()
+    QtWidgets.QApplication.instance().exec_()
