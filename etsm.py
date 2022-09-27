@@ -350,7 +350,7 @@ class Conditions(QtWidgets.QHBoxLayout):
         self.condition_number = num
         self.pattern_edit = QtWidgets.QLineEdit()
         self.arrow_icon_label = QtWidgets.QLabel()
-        self.arrow_icon = QtGui.QPixmap('right_arrow.png')
+        self.arrow_icon = QtGui.QPixmap('arrow-right.png')
         self.action_edit = QtWidgets.QLineEdit()
         self.but_condition_type = QtWidgets.QPushButton("Type")
         self.but_condition_type_menu = QtWidgets.QMenu()
@@ -534,12 +534,12 @@ class Etsm(QtWidgets.QMainWindow):
         self.command_manager_action.triggered.connect(self.command_manager_window)
         self.toolbar.addAction(self.command_manager_action)
 
-        self.pattern_manager_action.setIcon(QtGui.QIcon('glass.png'))
+        self.pattern_manager_action.setIcon(QtGui.QIcon('search.png'))
         self.pattern_manager_action.setToolTip("Pattern manager")
         self.pattern_manager_action.triggered.connect(self.pattern_manager_window)
         self.toolbar.addAction(self.pattern_manager_action)
 
-        self.conditions_manager_action.setIcon(QtGui.QIcon('light.png'))
+        self.conditions_manager_action.setIcon(QtGui.QIcon('light-bulb.png'))
         self.conditions_manager_action.setToolTip("Conditions manager")
         self.conditions_manager_action.triggered.connect(self.conditions_manager_window)
         self.toolbar.addAction(self.conditions_manager_action)
