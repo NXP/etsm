@@ -7,7 +7,7 @@ The ETSM receives the traces from the serial port and based on user inputs it ca
 send backs a command/set of commands to the device, or external events to an external program.
 Each received trace is compared with patterns to detect previously declared by the user.
 
-ADD SCHEMATIC
+![etsm](https://user-images.githubusercontent.com/52401665/195284542-ee6c8ff6-79b1-43ea-9ed7-f0c74149c728.PNG)
 
 To illustrate such a concept, NXP has developed a python based user-friendly GUI offering many features part of the ETSM mechanism.
 The user can modify on live different settings such as the serial port, the baudrate, the patterns to detect, or the commands to send.
@@ -15,7 +15,7 @@ Traces can be saved in a file for post processing, patterns detected will be hig
 
 This program works as a standalone program, and can be easily integrated in third party program without any modification.
 
-**Note : For advanced features as triggering event on third party program based on pattern detection, minor modifications on third party program must be done**
+**Note : For advanced features as triggering event on third party program based on pattern detection, minor modifications on third party program must be done.l**
 
 ## Installation
 
